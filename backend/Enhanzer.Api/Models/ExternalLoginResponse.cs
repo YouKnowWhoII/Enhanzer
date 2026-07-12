@@ -4,6 +4,9 @@ namespace Enhanzer.Api.Models;
 
 public sealed class ExternalLoginResponse
 {
+    [JsonPropertyName("Status_Code")]
+    public int? StatusCode { get; init; }
+
     [JsonPropertyName("Status")]
     public string? Status { get; init; }
 

@@ -50,10 +50,22 @@ export class LoginComponent {
         void this.router.navigate(['/purchase']);
       },
       error: (error: HttpErrorResponse) => {
-        this.errorMessage.set(error.error?.message ?? 'Login failed. Please check your credentials.');
+        this.errorMessage.set(this.getErrorMessage(error));
         this.isLoading.set(false);
       },
       complete: () => this.isLoading.set(false)
     });
+  }
+
+  private getErrorMessage(error: HttpErrorResponse): string {
+    if (typeof error.error === 'string' && error.error.trim().length > 0) {
+      return error.error;
+    }
+
+    if (typeof error.error?.message === 'string' && error.error.message.trim().length > 0) {
+      return error.error.message;
+    }
+
+    return 'Login failed. Please check your credentials.';
   }
 }

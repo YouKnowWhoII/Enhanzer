@@ -12,6 +12,7 @@ public sealed class ExternalAuthService(
     ILogger<ExternalAuthService> logger) : IExternalAuthService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private const string SuccessfulLoginMessage = "GetLoginData POS API Executed Successfully.";
 
     public async Task<ExternalLoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
@@ -55,10 +56,15 @@ public sealed class ExternalAuthService(
             throw new InvalidOperationException("Authentication service returned an invalid response.");
         }
 
+        if (loginResponse.StatusCode is not null and not 200)
+        {
+            throw new UnauthorizedAccessException(GetLoginFailureMessage(loginResponse.Message));
+        }
+
         if (loginResponse.UserLocations.Count == 0)
         {
             logger.LogWarning("External login response did not include User_Locations. StatusCode: {StatusCode}.", (int)response.StatusCode);
-            throw new UnauthorizedAccessException("Login succeeded, but the authentication service did not return User_Locations.");
+            throw new UnauthorizedAccessException(GetMissingLocationMessage(loginResponse.Message));
         }
 
         return loginResponse;
@@ -67,6 +73,7 @@ public sealed class ExternalAuthService(
     private static ExternalLoginResponse? ParseLoginResponse(string content)
     {
         using var document = JsonDocument.Parse(content);
+        var statusCode = FindInt(document.RootElement, "Status_Code", "statusCode");
         var message = FindString(document.RootElement, "Message", "message");
 
         // User_Locations is nested inside Response_Body in the staging response, so parsing is intentionally tolerant.
@@ -74,9 +81,25 @@ public sealed class ExternalAuthService(
 
         return new ExternalLoginResponse
         {
+            StatusCode = statusCode,
             Message = message,
             UserLocations = locations
         };
+    }
+
+    private static string GetLoginFailureMessage(string? message)
+    {
+        return string.IsNullOrWhiteSpace(message) ? "Invalid email or password." : message;
+    }
+
+    private static string GetMissingLocationMessage(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message) || !string.Equals(message, SuccessfulLoginMessage, StringComparison.OrdinalIgnoreCase))
+        {
+            return GetLoginFailureMessage(message);
+        }
+
+        return "Login succeeded, but no locations were returned for this user.";
     }
 
     private static string? FindString(JsonElement element, params string[] names)
@@ -96,6 +119,32 @@ public sealed class ExternalAuthService(
 
             var nestedValue = FindString(property.Value, names);
             if (!string.IsNullOrWhiteSpace(nestedValue))
+            {
+                return nestedValue;
+            }
+        }
+
+        return null;
+    }
+
+    private static int? FindInt(JsonElement element, params string[] names)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        foreach (var property in element.EnumerateObject())
+        {
+            if (names.Any(name => string.Equals(property.Name, name, StringComparison.OrdinalIgnoreCase))
+                && property.Value.ValueKind == JsonValueKind.Number
+                && property.Value.TryGetInt32(out var value))
+            {
+                return value;
+            }
+
+            var nestedValue = FindInt(property.Value, names);
+            if (nestedValue.HasValue)
             {
                 return nestedValue;
             }

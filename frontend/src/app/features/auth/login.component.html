@@ -1,0 +1,52 @@
+<section class="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top_left,#bae6fd,transparent_35%),linear-gradient(135deg,#f8fafc,#eef2ff)] px-4 py-12">
+  <div class="w-full max-w-md">
+    <div class="mb-10 text-center">
+      <div class="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-sky-400 to-indigo-700 text-white shadow-lg">
+        <i class="pi pi-shopping-bag text-2xl"></i>
+      </div>
+
+      <h1 class="text-3xl font-extrabold tracking-tight text-slate-950">Hi</h1>
+      <p class="mt-3 text-sm text-slate-500">Sign in to manage purchase bills.</p>
+    </div>
+
+    <p-card>
+      <form class="space-y-7" [formGroup]="form" (ngSubmit)="submit()">
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700" for="email">
+            <i class="pi pi-envelope"></i>
+            Email*
+          </label>
+
+          <input id="email" pInputText formControlName="email" autocomplete="email" placeholder="name@company.com" class="w-full" />
+
+          @if (validationMessage('email', 'Email')) {
+            <p class="text-sm text-red-600">{{ validationMessage('email', 'Email') }}</p>
+          }
+        </div>
+
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 text-sm font-semibold text-slate-700" for="password">
+            <i class="pi pi-key"></i>
+            Password*
+          </label>
+
+          <p-password inputId="password" formControlName="password" [feedback]="false" [toggleMask]="true" autocomplete="current-password" placeholder="Enter password" styleClass="w-full" />
+
+          @if (validationMessage('password', 'Password')) {
+            <p class="text-sm text-red-600">{{ validationMessage('password', 'Password') }}</p>
+          }
+        </div>
+
+        @if (errorMessage()) {
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="pt-1">
+          <p-button type="submit" label="LOGIN" icon="pi pi-lock-open" [loading]="isLoading()" [disabled]="form.invalid || isLoading()" styleClass="w-full justify-center bg-gradient-to-r from-sky-400 to-indigo-700 border-0" />
+        </div>
+      </form>
+    </p-card>
+  </div>
+</section>

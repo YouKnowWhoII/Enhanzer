@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #111827;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.p-card {
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+.p-inputtext,
+.p-password-input,
+.p-inputnumber-input,
+.p-inputnumber,
+.p-password,
+.p-autocomplete,
+.p-select,
+.p-autocomplete-input {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .p-card .p-card-body {
+    padding: 1rem;
+  }
+
+  .p-toast {
+    max-width: calc(100vw - 1rem);
+  }
+}

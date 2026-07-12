@@ -1,0 +1,161 @@
+<app-shell title="Purchase Bill" eyebrow="Enter information for the purchase bill" (logout)="logout()">
+  <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-6">
+    <section class="min-w-0 space-y-5 sm:space-y-6">
+      <p-card>
+        <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-slate-950">Details</h2>
+            <p class="text-sm text-slate-500">Add item rows with calculated cost and selling totals.</p>
+          </div>
+          <p-tag value="Items" icon="pi pi-list" severity="info" />
+        </div>
+
+        @if (isLoadingLocations()) {
+          <div class="grid min-h-44 place-items-center">
+            <p-progressSpinner ariaLabel="Loading batches" />
+          </div>
+        } @else {
+          <form class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" [formGroup]="form" (ngSubmit)="addItem()">
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Item*</label>
+              <p-autocomplete formControlName="item" [suggestions]="filteredItems()" (completeMethod)="filterItems($event)" [dropdown]="true" placeholder="Select item" />
+              @if (validationMessage('item', 'Item')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('item', 'Item') }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Batch*</label>
+              <p-select formControlName="batch" [options]="locations()" optionLabel="locationName" optionValue="locationName" placeholder="Select batch" />
+              @if (validationMessage('batch', 'Batch')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('batch', 'Batch') }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Standard Cost*</label>
+              <p-inputNumber formControlName="standardCost" mode="decimal" [min]="0.01" [minFractionDigits]="2" [maxFractionDigits]="2" />
+              @if (validationMessage('standardCost', 'Standard cost')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('standardCost', 'Standard cost') }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Standard Price*</label>
+              <p-inputNumber formControlName="standardPrice" mode="decimal" [min]="0.01" [minFractionDigits]="2" [maxFractionDigits]="2" />
+              @if (validationMessage('standardPrice', 'Standard price')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('standardPrice', 'Standard price') }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Quantity*</label>
+              <p-inputNumber formControlName="quantity" [min]="1" [showButtons]="true" />
+              @if (validationMessage('quantity', 'Quantity')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('quantity', 'Quantity') }}</p>
+              }
+            </div>
+
+            <div>
+              <label class="mb-2 block text-sm font-semibold text-slate-700">Discount %*</label>
+              <p-inputNumber formControlName="discount" suffix="%" [min]="0" [max]="100" [minFractionDigits]="0" [maxFractionDigits]="2" />
+              @if (validationMessage('discount', 'Discount')) {
+                <p class="mt-2 text-sm text-red-600">{{ validationMessage('discount', 'Discount') }}</p>
+              }
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Cost</p>
+              <p class="mt-2 text-2xl font-bold text-slate-950">{{ previewTotalCost() | number: '1.2-2' }}</p>
+            </div>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Selling</p>
+              <p class="mt-2 text-2xl font-bold text-slate-950">{{ previewTotalSelling() | number: '1.2-2' }}</p>
+            </div>
+
+            <div class="sm:col-span-2 xl:col-span-4">
+              <p-button type="submit" label="Add Item" icon="pi pi-plus" [disabled]="form.invalid" />
+            </div>
+          </form>
+        }
+      </p-card>
+
+      <p-card>
+        <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-slate-950">Added Items</h2>
+            <p class="text-sm text-slate-500">Remove rows before saving if the bill changes.</p>
+          </div>
+          <p-button label="Save Bill" icon="pi pi-save" [loading]="isSaving()" [disabled]="items().length === 0 || isSaving()" (onClick)="saveBill()" />
+        </div>
+
+        <p-table [value]="items()" [tableStyle]="{ 'min-width': '980px' }" responsiveLayout="scroll">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Item</th>
+              <th>Batch</th>
+              <th class="text-right">Qty</th>
+              <th class="text-right">Cost</th>
+              <th class="text-right">Price</th>
+              <th class="text-right">Discount</th>
+              <th class="text-right">Total Cost</th>
+              <th class="text-right">Total Selling</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+              <td class="font-semibold text-slate-800">{{ row.item }}</td>
+              <td>{{ row.batch }}</td>
+              <td class="text-right">{{ row.quantity }}</td>
+              <td class="text-right">{{ row.standardCost | number: '1.2-2' }}</td>
+              <td class="text-right">{{ row.standardPrice | number: '1.2-2' }}</td>
+              <td class="text-right">{{ row.discount | number: '1.0-2' }}%</td>
+              <td class="text-right font-semibold">{{ row.totalCost | number: '1.2-2' }}</td>
+              <td class="text-right font-semibold">{{ row.totalSelling | number: '1.2-2' }}</td>
+              <td class="text-right">
+                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true" ariaLabel="Remove item" (onClick)="removeItem(rowIndex)" />
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="9" class="py-10 text-center text-slate-500">No purchase items added yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
+    </section>
+
+    <aside class="space-y-4 lg:sticky lg:top-24 lg:self-start">
+      <p-card>
+        <div class="flex items-center gap-2 text-sky-600">
+          <i class="pi pi-chart-bar"></i>
+          <h2 class="font-bold">Summary</h2>
+        </div>
+        <p-divider />
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-500">Total Items</span>
+            <span class="text-xl font-bold text-slate-950">{{ totalItems() }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-500">Total Quantity</span>
+            <span class="text-xl font-bold text-slate-950">{{ totalQuantity() }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-500">Total Cost</span>
+            <span class="text-xl font-bold text-slate-950">{{ totalCost() | number: '1.2-2' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-500">Total Selling</span>
+            <span class="text-xl font-bold text-slate-950">{{ totalSelling() | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      </p-card>
+    </aside>
+  </div>
+</app-shell>

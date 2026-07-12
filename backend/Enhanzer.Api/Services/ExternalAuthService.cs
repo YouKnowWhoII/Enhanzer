@@ -116,6 +116,20 @@ public sealed class ExternalAuthService(
 
     private static string? FindString(JsonElement element, params string[] names)
     {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var nestedValue = FindString(item, names);
+                if (!string.IsNullOrWhiteSpace(nestedValue))
+                {
+                    return nestedValue;
+                }
+            }
+
+            return null;
+        }
+
         if (element.ValueKind != JsonValueKind.Object)
         {
             return null;
@@ -141,6 +155,20 @@ public sealed class ExternalAuthService(
 
     private static int? FindInt(JsonElement element, params string[] names)
     {
+        if (element.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var nestedValue = FindInt(item, names);
+                if (nestedValue.HasValue)
+                {
+                    return nestedValue;
+                }
+            }
+
+            return null;
+        }
+
         if (element.ValueKind != JsonValueKind.Object)
         {
             return null;

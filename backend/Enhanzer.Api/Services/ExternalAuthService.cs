@@ -58,13 +58,13 @@ public sealed class ExternalAuthService(
 
         if (loginResponse.StatusCode is not null and not 200)
         {
-            throw new UnauthorizedAccessException(GetLoginFailureMessage(loginResponse.Message));
+            throw new UnauthorizedAccessException(GetLoginFailureMessage(loginResponse));
         }
 
         if (loginResponse.UserLocations.Count == 0)
         {
             logger.LogWarning("External login response did not include User_Locations. StatusCode: {StatusCode}.", (int)response.StatusCode);
-            throw new UnauthorizedAccessException(GetMissingLocationMessage(loginResponse.Message));
+            throw new UnauthorizedAccessException(GetMissingLocationMessage(loginResponse));
         }
 
         return loginResponse;
@@ -75,6 +75,7 @@ public sealed class ExternalAuthService(
         using var document = JsonDocument.Parse(content);
         var statusCode = FindInt(document.RootElement, "Status_Code", "statusCode");
         var message = FindString(document.RootElement, "Message", "message");
+        var documentMessage = FindString(document.RootElement, "Doc_Msg", "docMsg");
 
         // User_Locations is nested inside Response_Body in the staging response, so parsing is intentionally tolerant.
         var locations = FindLocations(document.RootElement);
@@ -83,20 +84,31 @@ public sealed class ExternalAuthService(
         {
             StatusCode = statusCode,
             Message = message,
+            DocumentMessage = documentMessage,
             UserLocations = locations
         };
     }
 
-    private static string GetLoginFailureMessage(string? message)
+    private static string GetLoginFailureMessage(ExternalLoginResponse response)
     {
-        return string.IsNullOrWhiteSpace(message) ? "Invalid email or password." : message;
+        if (!string.IsNullOrWhiteSpace(response.DocumentMessage))
+        {
+            return response.DocumentMessage;
+        }
+
+        return string.IsNullOrWhiteSpace(response.Message) ? "Invalid email or password." : response.Message;
     }
 
-    private static string GetMissingLocationMessage(string? message)
+    private static string GetMissingLocationMessage(ExternalLoginResponse response)
     {
-        if (string.IsNullOrWhiteSpace(message) || !string.Equals(message, SuccessfulLoginMessage, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrWhiteSpace(response.DocumentMessage))
         {
-            return GetLoginFailureMessage(message);
+            return response.DocumentMessage;
+        }
+
+        if (string.IsNullOrWhiteSpace(response.Message) || !string.Equals(response.Message, SuccessfulLoginMessage, StringComparison.OrdinalIgnoreCase))
+        {
+            return GetLoginFailureMessage(response);
         }
 
         return "Login succeeded, but no locations were returned for this user.";

@@ -13,6 +13,9 @@ public sealed class ExternalLoginResponse
     [JsonPropertyName("Message")]
     public string? Message { get; init; }
 
+    [JsonPropertyName("Doc_Msg")]
+    public string? DocumentMessage { get; init; }
+
     [JsonPropertyName("User_Locations")]
     public List<ExternalLocation> UserLocations { get; init; } = [];
 }
